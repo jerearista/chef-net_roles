@@ -1,0 +1,55 @@
+event-handler dhclient
+   trigger on-boot
+   action bash sudo dhclient ma1
+!
+transceiver qsfp default-mode 4x10G
+!
+hostname <%= @hostname %>
+<% @nameservers.each do |server| %>
+ip name-server vrf default <%= server %>
+<% end %>
+ip domain-name <%= @domainname %>
+!
+ntp server <%= @ntp_server %> prefer iburst source <%= @ntp_source_intf %>
+!
+spanning-tree mode mstp
+!
+aaa authorization exec default local
+!
+aaa root secret 5 $1$HpCGjy34$28/mhRr9TfgubNZF8cAwC/
+!
+username admin privilege 15 role network-admin secret 5 $1$x16q9Lly$f2aZ/oWg3DyPgxSNIwwEA1
+username vagrant privilege 15 role network-admin secret 5 $1$rHYTOOXQ$LI9mHDKv1SzqYH7uNUldD.
+!
+<% @l3ports.each do |l3port| %>
+<% l3port.each do |intf, l3data| %>
+interface <%= intf %>
+   no switchport
+   ip address <%= l3data[:ip_addr] %>
+!
+<% end %>
+<% end %>
+<% @l2ports.each do |l2port| %>
+<% l2port.each do |intf, l3data| %>
+interface <%= intf %>
+!
+<% end %>
+<% end %>
+!
+interface Management1
+   description Provisioned by Vagrant
+   ip address 10.0.2.15/24
+!
+<% @static_routes.each_pair do |dest, gateway| %>
+ip route <%= dest %> <%= gateway %>
+<% end %>
+!
+no ip routing
+!
+management api http-commands
+   protocol http
+   protocol unix-socket
+   no shutdown
+!
+!
+end
